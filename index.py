@@ -7,7 +7,7 @@ import tempfile
 import os
 
 # ======== 初始化與介面 ========
-st.set_page_config(page_title="語音轉錄系統", layout="centered")
+st.set_page_config(page_title="會議小能手", layout="centered")
 
 # 隱藏 Streamlit logo 與選單
 st.markdown("""
@@ -43,58 +43,49 @@ if "summary" not in st.session_state:
 if "audio_path" not in st.session_state:
     st.session_state.audio_path = None
 
-# ======== 錄音頁面 ========
-if selected == "Record":
+# --- 錄音頁面 ---
+if selected == "錄音":
     st.title("🎤 即時錄音系統")
-    st.markdown("使用下方錄音按鈕開始錄音，完成後可下載音訊檔。")
-
-    audio_file = st.audio_input("請點擊開始錄音", key="audio_recorder")
-
+    audio_file = st.audio_input("開始錄音", key="recorder")
     if audio_file:
-        audio_bytes = audio_file.read()
-        st.audio(audio_bytes, format="audio/wav")
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp:
+            tmp.write(audio_file.read())
+            st.session_state.audio_path = tmp.name
+        st.audio(audio_file)
+        st.success("錄音已保存，請前往「轉錄」頁進行轉錄。")
 
-        # 下載連結
-        b64 = base64.b64encode(audio_bytes).decode()
-        href = f'<a href="data:audio/wav;base64,{b64}" download="recording.wav">📥 下載錄音檔</a>'
-        st.markdown(href, unsafe_allow_html=True)
-
-# ======== 上傳頁面 ========
-if selected == "Upload":
+# --- 上傳頁面 ---
+elif selected == "上傳":
     st.title("📤 上傳音訊檔")
-
-    uploaded_file = st.file_uploader("請上傳音訊檔", type=["mp3", "mp4", "wav"])
+    uploaded_file = st.file_uploader("請上傳音訊檔 (wav, mp3, mp4)", type=["wav", "mp3", "mp4"])
     if uploaded_file:
-        st.audio(uploaded_file)
-
         with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp:
             tmp.write(uploaded_file.read())
             st.session_state.audio_path = tmp.name
+        st.audio(uploaded_file)
+        st.success("檔案已保存，請前往「轉錄」頁進行轉錄。")
 
-        st.success("上傳成功！請切換至 Transcribe 進行語音辨識。")
-
-# ======== 語音轉文字 ========
-if selected == "Transcribe":
-    st.title("📝 語音轉文字")
-    if not st.session_state.audio_path:
-        st.warning("請先至 Upload 頁面上傳音訊檔！")
+# --- 轉錄頁面 ---
+elif selected == "轉錄":
+    st.title("📝 語音轉錄")
+    if st.session_state.audio_path is None:
+        st.info("請先錄音或上傳音訊檔。")
     else:
-        if st.button("🎙️ 開始辨識"):
-            with st.spinner("辨識中..."):
-                with open(st.session_state.audio_path, "rb") as f:
-                    transcript = client.audio.transcriptions.create(
-                        model="whisper-1",
-                        file=f,
-                        response_format="text"
-                    )
-                st.session_state.transcription = transcript
-                st.success("語音辨識完成！")
+        if st.button("開始轉錄"):
+            with open(st.session_state.audio_path, "rb") as f:
+                transcript = client.audio.transcriptions.create(
+                    model="whisper-1",
+                    file=f,
+                    response_format="text"
+                )
+            st.session_state.transcription = transcript
+            st.success("語音辨識完成！")
         if st.session_state.transcription:
-            st.text_area("🔍 辨識結果", st.session_state.transcription, height=300)
+            st.text_area("📄 轉錄結果", st.session_state.transcription, height=300)
 
 # ======== 摘要頁面 ========
 if selected == "Summary":
-    st.title("📄 摘要產生")
+    st.title(" 🔍摘要產生")
     if not st.session_state.transcription:
         st.warning("請先完成語音辨識！")
     else:
