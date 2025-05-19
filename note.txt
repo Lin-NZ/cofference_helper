@@ -1,0 +1,19 @@
+How to make secret key private:
+https://docs.streamlit.io/streamlit-community-cloud/get-started/deploy-an-app/connect-to-data-sources/secrets-management
+
+Open Streamlit share:
+https://share.streamlit.io/
+
+Bootstrap Icons: 
+https://icons.getbootstrap.com/
+
+Note:
+Install openai & streamlit
+  # pip install openai
+  # python3 -m pip install openai 
+  # python -m pip install openai
+
+  # pip install streamlit
+
+Run Streamlit Locally
+  # python -m streamlit run Whisper.py
