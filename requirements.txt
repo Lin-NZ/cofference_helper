@@ -1,5 +1,23 @@
-openai>=1.0.0
-streamlit
+# 基本套件
+streamlit>=1.31.1
 streamlit-option-menu
+openai>=1.10.0
+python-dotenv
+
+# 音訊處理相關
 pydub
+ffmpeg-python
 numpy
+scipy
+
+# 處理大型檔案上傳與音訊切割
+audioread
+
+# 若需處理 MP3, MP4 等音訊格式
+moviepy
+
+# 讓 Whisper 能接受大檔音訊，透過分段後傳遞
+tqdm
+
+# 若使用 Streamlit cloud，建議也加入這行以確保 base64 處理功能正常
+requests
