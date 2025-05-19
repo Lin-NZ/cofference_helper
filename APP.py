@@ -42,8 +42,7 @@ if 'summary' not in st.session_state:
     st.session_state.summary = None
 
 # 處理大檔案（切片上傳）
-def transcribe_large_audio(file_path, chunk_length=20*60*1000):
-    audio = AudioSegment.from_file(file_path)
+def transcribe_large_audio(audio, chunk_length=20*60*1000):
     full_transcript = ""
 
     chunks = math.ceil(len(audio) / chunk_length)
@@ -76,6 +75,7 @@ def summarize_text(text):
 if selected == "Record":
     st.title("🎤 即時錄音系統")
     audio_file = st.audio_input("點擊下方按鈕錄音", key="recorder")
+    AUDIO = audio_file
 
     if audio_file is not None:
         audio_bytes = audio_file.read()
@@ -85,23 +85,15 @@ if selected == "Record":
         href = f'<a href="data:audio/wav;base64,{b64}" download="recording.wav">📥 下載錄音</a>'
         st.markdown(href, unsafe_allow_html=True)
 
-        # 存成檔案供轉譯用
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp:
-            tmp.write(audio_bytes)
-            st.session_state.audio_path = tmp.name
-
 # Upload 頁面
 if selected == "Upload":
     st.title("📁 上傳音檔")
     uploaded = st.file_uploader("支援 MP3/WAV/MP4", type=["mp3", "wav", "mp4"])
+    AUDIO = uploaded
 
     if uploaded:
         st.audio(uploaded)
-
-        with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(uploaded.name)[1]) as tmp:
-            tmp.write(uploaded.read())
-            st.session_state.audio_path = tmp.name
-            st.success("✅ 上傳成功，請前往 Transcribe 頁面")
+        st.success("✅ 上傳成功，請前往 Transcribe 頁面")
 
 # Transcribe 頁面
 if selected == "Transcribe":
@@ -111,7 +103,7 @@ if selected == "Transcribe":
     else:
         if st.button("🎧 開始轉譯"):
             with st.spinner("轉譯中，請稍候..."):
-                transcript = transcribe_large_audio(st.session_state.audio_path)
+                transcript = transcribe_large_audio(AUDIO)
                 st.session_state.transcribe_text = transcript
                 st.success("✅ 轉譯完成！")
 
