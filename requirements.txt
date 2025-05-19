@@ -1,3 +1,5 @@
 openai>=1.0.0
-streamlit-option-menu
 streamlit
+streamlit-option-menu
+pydub
+numpy
