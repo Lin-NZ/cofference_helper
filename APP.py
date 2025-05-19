@@ -101,26 +101,34 @@ if selected == "Record":
 # Upload 頁面
 if selected == "Upload":
     st.title("📁 上傳音檔")
-    uploaded = st.file_uploader("支援 MP3/WAV/MP4", type=["mp3", "wav", "mp4"])
+    uploaded = st.file_uploader(
+        "支援 MP3/WAV/MP4",
+        type=["mp3", "wav", "mp4"],
+        accept_multiple_files=False
+    )
 
     if uploaded is not None:
         try:
-            # 先讀取檔案內容
-            file_bytes = uploaded.read()
-            
-            # 重置檔案指針
-            uploaded.seek(0)
+            # 檢查檔案類型
+            file_extension = os.path.splitext(uploaded.name)[1].lower()
+            if file_extension not in ['.mp3', '.wav', '.mp4']:
+                raise ValueError(f"不支援的檔案格式：{file_extension}")
+
+            # 讀取檔案內容
+            file_bytes = uploaded.getvalue()
             
             # 顯示音頻
-            st.audio(file_bytes, format=f"audio/{uploaded.name.split('.')[-1]}")
+            st.audio(file_bytes, format=f"audio/{file_extension[1:]}")
             
             # 儲存檔案
-            with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(uploaded.name)[1]) as tmp:
+            with tempfile.NamedTemporaryFile(delete=False, suffix=file_extension) as tmp:
                 tmp.write(file_bytes)
                 st.session_state.audio_path = tmp.name
                 st.success("✅ 上傳成功，請前往 Transcribe 頁面")
         except Exception as e:
             st.error(f"上傳過程發生錯誤：{str(e)}")
+            if 'audio_path' in st.session_state:
+                del st.session_state.audio_path
 
 # Transcribe 頁面
 if selected == "Transcribe":
