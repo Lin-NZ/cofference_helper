@@ -1,4 +1,3 @@
-
 import streamlit as st
 from streamlit_option_menu import option_menu
 from openai import OpenAI
@@ -42,25 +41,35 @@ if 'summary' not in st.session_state:
     st.session_state.summary = None
 
 # 處理大檔案（切片上傳）
-def transcribe_large_audio(audio, chunk_length=20*60*1000):
-    full_transcript = ""
+def transcribe_large_audio(file_path, chunk_length=20*60*1000):
+    try:
+        # 檢查檔案是否存在
+        if not os.path.exists(file_path):
+            raise FileNotFoundError(f"找不到檔案：{file_path}")
+            
+        # 讀取音頻檔案
+        audio = AudioSegment.from_file(file_path)
+        full_transcript = ""
 
-    chunks = math.ceil(len(audio) / chunk_length)
+        chunks = math.ceil(len(audio) / chunk_length)
 
-    for i in range(chunks):
-        chunk = audio[i*chunk_length:(i+1)*chunk_length]
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as tmp:
-            chunk.export(tmp.name, format="mp3")
-            with open(tmp.name, "rb") as f:
-                transcript = client.audio.transcriptions.create(
-                    model="whisper-1",
-                    file=f,
-                    response_format="text"
-                )
-                full_transcript += transcript + "\n"
-            os.unlink(tmp.name)
+        for i in range(chunks):
+            chunk = audio[i*chunk_length:(i+1)*chunk_length]
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as tmp:
+                chunk.export(tmp.name, format="mp3")
+                with open(tmp.name, "rb") as f:
+                    transcript = client.audio.transcriptions.create(
+                        model="whisper-1",
+                        file=f,
+                        response_format="text"
+                    )
+                    full_transcript += transcript + "\n"
+                os.unlink(tmp.name)
 
-    return full_transcript.strip()
+        return full_transcript.strip()
+    except Exception as e:
+        st.error(f"轉譯過程發生錯誤：{str(e)}")
+        return None
 
 # summarize
 def summarize_text(text):
@@ -75,7 +84,6 @@ def summarize_text(text):
 if selected == "Record":
     st.title("🎤 即時錄音系統")
     audio_file = st.audio_input("點擊下方按鈕錄音", key="recorder")
-    AUDIO = audio_file
 
     if audio_file is not None:
         audio_bytes = audio_file.read()
@@ -85,15 +93,34 @@ if selected == "Record":
         href = f'<a href="data:audio/wav;base64,{b64}" download="recording.wav">📥 下載錄音</a>'
         st.markdown(href, unsafe_allow_html=True)
 
+        # 存成檔案供轉譯用
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp:
+            tmp.write(audio_bytes)
+            st.session_state.audio_path = tmp.name
+
 # Upload 頁面
 if selected == "Upload":
     st.title("📁 上傳音檔")
     uploaded = st.file_uploader("支援 MP3/WAV/MP4", type=["mp3", "wav", "mp4"])
-    AUDIO = uploaded
 
-    if uploaded:
-        st.audio(uploaded)
-        st.success("✅ 上傳成功，請前往 Transcribe 頁面")
+    if uploaded is not None:
+        try:
+            # 先讀取檔案內容
+            file_bytes = uploaded.read()
+            
+            # 重置檔案指針
+            uploaded.seek(0)
+            
+            # 顯示音頻
+            st.audio(file_bytes, format=f"audio/{uploaded.name.split('.')[-1]}")
+            
+            # 儲存檔案
+            with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(uploaded.name)[1]) as tmp:
+                tmp.write(file_bytes)
+                st.session_state.audio_path = tmp.name
+                st.success("✅ 上傳成功，請前往 Transcribe 頁面")
+        except Exception as e:
+            st.error(f"上傳過程發生錯誤：{str(e)}")
 
 # Transcribe 頁面
 if selected == "Transcribe":
@@ -103,9 +130,13 @@ if selected == "Transcribe":
     else:
         if st.button("🎧 開始轉譯"):
             with st.spinner("轉譯中，請稍候..."):
-                transcript = transcribe_large_audio(AUDIO)
-                st.session_state.transcribe_text = transcript
-                st.success("✅ 轉譯完成！")
+                try:
+                    transcript = transcribe_large_audio(st.session_state.audio_path)
+                    if transcript is not None:
+                        st.session_state.transcribe_text = transcript
+                        st.success("✅ 轉譯完成！")
+                except Exception as e:
+                    st.error(f"轉譯失敗：{str(e)}")
 
     if st.session_state.transcribe_text:
         st.text_area("逐字稿內容", st.session_state.transcribe_text, height=400)
