@@ -44,7 +44,7 @@ if "audio_path" not in st.session_state:
     st.session_state.audio_path = None
 
 # --- 錄音頁面 ---
-if selected == "錄音":
+if selected == "Record":
     st.title("🎤 即時錄音系統")
     audio_file = st.audio_input("開始錄音", key="recorder")
     if audio_file:
@@ -55,7 +55,7 @@ if selected == "錄音":
         st.success("錄音已保存，請前往「轉錄」頁進行轉錄。")
 
 # --- 上傳頁面 ---
-elif selected == "上傳":
+elif selected == "Upload":
     st.title("📤 上傳音訊檔")
     uploaded_file = st.file_uploader("請上傳音訊檔 (wav, mp3, mp4)", type=["wav", "mp3", "mp4"])
     if uploaded_file:
@@ -66,7 +66,7 @@ elif selected == "上傳":
         st.success("檔案已保存，請前往「轉錄」頁進行轉錄。")
 
 # --- 轉錄頁面 ---
-elif selected == "轉錄":
+elif selected == "Transcribe":
     st.title("📝 語音轉錄")
     if st.session_state.audio_path is None:
         st.info("請先錄音或上傳音訊檔。")
